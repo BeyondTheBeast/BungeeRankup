@@ -1,0 +1,7 @@
+name: BungeeRankup
+main: com.Vankka.bungeerankup.BungeeRankup
+version: 1.0
+author: Vankka
+depends:
+  - LuckPerms
+  - BungeeOnlineTime

@@ -1,0 +1,7 @@
+log: true
+sync_delay: 5
+ranks:
+  rankup1: 
+    rank_from: "default"
+    rank_to: "member"
+    time_required: 60
