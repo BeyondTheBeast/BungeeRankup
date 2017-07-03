@@ -1,7 +1,16 @@
+# Log rankup events
 log: true
+
+# Delay to sync ranks [Minutes]
 sync_delay: 5
+
+# Ranks
 ranks:
+  # Name of the rankup
   rankup1: 
+  	# Rankup from Rank
     rank_from: "default"
+    # Rankup to Rank
     rank_to: "member"
+    # Rankup time required [Minutes]
     time_required: 60
