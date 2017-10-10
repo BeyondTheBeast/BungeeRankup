@@ -7,10 +7,14 @@ sync_delay: 5
 # Ranks
 ranks:
   # Name of the rankup
-  rankup1: 
-  	# Rankup from Rank
-    rank_from: "default"
-    # Rankup to Rank
-    rank_to: "member"
-    # Rankup time required [Minutes]
-    time_required: 60
+  rankup1:
+    # Require all [true] or require one [false] permission(s)
+     requireAllPositivePermissions: true
+     requireAllNegativePermissions: true
+     positivePermissions: ["group.default"]
+     negativePermissions: ["group.member"]
+    # Time required for rankup [Minutes]
+     timeRequired: 60
+    # Command to run, if conditions are met
+    # %name% user's name
+     commands: ["lpb user %name% parent add member", "lpb user %name% switchprimarygroup member", "lpb user %name% parent remove default"]

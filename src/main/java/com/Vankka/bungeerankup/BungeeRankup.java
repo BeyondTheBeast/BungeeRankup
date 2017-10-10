@@ -12,24 +12,22 @@ import com.google.common.io.ByteStreams;
 
 import lu.r3flexi0n.bungeeonlinetime.BungeeOnlineTime;
 
-import me.lucko.luckperms.LuckPerms;
-import me.lucko.luckperms.api.LuckPermsApi;
-import me.lucko.luckperms.api.User;
-import me.lucko.luckperms.exceptions.ObjectAlreadyHasException;
-import me.lucko.luckperms.exceptions.ObjectLacksException;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.api.scheduler.ScheduledTask;
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 
-@SuppressWarnings("deprecation")
 public class BungeeRankup extends Plugin
 {
-	public static Configuration config;
+	private static BungeeRankup instance;
+	private Configuration config;
+	private ScheduledTask task;
 	
 	public void onEnable() {		
+		instance = this;
 		File configFile = new File(getDataFolder(), "config.yml");
 		
 		try {
@@ -45,67 +43,95 @@ public class BungeeRankup extends Plugin
 			}
 			
 			config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile); 
-			
-			switch(config.getInt("configVersion")){
-				default:
-					ProxyServer.getInstance().getLogger().info("Configuration is up-to-date, no migration required!");
-			}
-			
 		} catch (IOException e) {
 			ProxyServer.getInstance().getLogger().warning("Unable to create configuration!");
 			e.printStackTrace();
 		}
 		
-		
 		startScheduler();
+		ProxyServer.getInstance().getPluginManager().registerCommand(this, new BRCommand("br"));
 	}
 	
-	private void startScheduler(){
-		ProxyServer.getInstance().getScheduler().schedule(this, new Runnable() {
-			public void run() {
-				try {
-					if(ProxyServer.getInstance().getPlayers().size() == 0) return;
-					if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(" -- Starting rankup check -- ");
-					
-					LuckPermsApi lpapi = null;
-					if(LuckPerms.getApiSafe().isPresent()) lpapi = LuckPerms.getApiSafe().get();
-					if(lpapi == null){
-						ProxyServer.getInstance().getLogger().warning("\n\nLuckPerms API is not present!\n");
-						return;
-					}
-					for (ProxiedPlayer p : ProxyServer.getInstance().getPlayers()){
+	public void startScheduler(){
+		task = ProxyServer.getInstance().getScheduler().schedule(this, new Timer(), config.getLong("sync_delay"), TimeUnit.MINUTES);
+	}
+	
+	public void stopScheduler(){
+		ProxyServer.getInstance().getScheduler().cancel(task);
+	}
+	
+	public void check(){
+		try {
+			if(ProxyServer.getInstance().getPlayers().size() == 0){
+				if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info("No players online, not checking");
+				return;
+			}
+			if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(" -- Starting rankup check -- ");
+			
+			if(ProxyServer.getInstance().getPlayers().size() != 0){
+				for (ProxiedPlayer p : ProxyServer.getInstance().getPlayers()){
+					for(String s : config.getSection("ranks").getKeys()){
+						Configuration sec = config.getSection("ranks").getSection(s);
 						int i = BungeeOnlineTime.mysql.getOnlineTime(p.getUniqueId());
-						User user = null;
-						if(lpapi.getUserSafe(p.getUniqueId()).isPresent()) user = lpapi.getUserSafe(p.getUniqueId()).get();
-						if(user == null){
-							ProxyServer.getInstance().getLogger().warning("\n\nLuckPerms: player not present!\n");
-							return;
+							
+						boolean proceed = false;
+						int posAmount = 0;
+						int negAmount = 0;
+						for(String str : sec.getStringList("postivePermissions")){
+							if(p.hasPermission(str)) posAmount++;
 						}
 						
-						for(String s : config.getSection("ranks").getKeys()){
-							Configuration sec = config.getSection("ranks").getSection(s);
-							
-							boolean hasGroup = false;
-							for(String str : lpapi.getUser(p.getUniqueId()).getGroupNames()){
-								if(str.equalsIgnoreCase(sec.getString("rank_from"))) hasGroup = true;
+						for(String str : sec.getStringList("negativePermissions")){
+							if(p.hasPermission(str)) negAmount++;
+						}
+						
+						if(sec.getBoolean("requireAllPositivePermissions")){
+							if(sec.getStringList("positivePermissions").size() == posAmount){
+								proceed = true;
+							}else{
+								proceed = false;
 							}
-							if(!hasGroup) return;
-							
-							if(i >= sec.getDouble("time_required") && hasGroup){
-								user.addGroup(lpapi.getGroup(sec.getString("rank_to")));
-								user.setPrimaryGroup(sec.getString("rank_to"));
-								user.removeGroup(lpapi.getGroup(sec.getString("rank_from")));
-								lpapi.getStorage().saveUser(user);
-								if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(p.getName() + " ranked up to " + sec.getString("rank_to") + " from " + sec.getString("rank_from"));
+						}else{
+							if(posAmount > 0){
+								proceed = true;
+							}else{
+								proceed = false;
 							}
 						}
 						
-						if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(" -- Ended rankup check -- ");
+						if(sec.getBoolean("requireAllNegativePermissions")){
+							if(sec.getStringList("negativePermissions").size() == negAmount){
+								proceed = true;
+							}else{
+								proceed = false;
+							}
+						}else{
+							if(negAmount > 0){
+								proceed = true;
+							}else{
+								proceed = false;
+							}
+						}
+						
+						if(!proceed) continue;
+						
+						if(i >= sec.getDouble("timeRequired")){
+							if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(p.getName() + " met the conditions. Time for a rankup!");
+							for(String str : sec.getStringList("commands")){
+								ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", p.getName()));
+								ProxyServer.getInstance().getLogger().info(str.replace("%name%", p.getName()));
+							}
+						}
 					}
-				} catch (ClassNotFoundException | SQLException | ObjectAlreadyHasException | ObjectLacksException e) {
-					e.printStackTrace();
 				}
 			}
-		}, config.getLong("sync_delay"), TimeUnit.MINUTES);
+			
+			if(config.getBoolean("log")) ProxyServer.getInstance().getLogger().info(" -- Ended rankup check -- ");
+		} catch (ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}
 	}
+	
+	public static BungeeRankup getInstance(){ return instance; }
+	public Configuration getConfig(){ return config; }
 }
