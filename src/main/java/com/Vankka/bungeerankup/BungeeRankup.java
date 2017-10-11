@@ -71,7 +71,8 @@ public class BungeeRankup extends Plugin
 			if(ProxyServer.getInstance().getPlayers().size() != 0){
 				for (ProxiedPlayer p : ProxyServer.getInstance().getPlayers()){
 					for(String s : config.getSection("ranks").getKeys()){
-						Configuration sec = config.getSection("ranks").getSection(s);
+						Configuration sec = config.getSection("ranks").getSection(s);
+
 						int i = BungeeOnlineTime.mysql.getOnlineTime(p.getUniqueId());
 							
 						boolean proceed = false;
@@ -82,7 +83,7 @@ public class BungeeRankup extends Plugin
 						}
 						
 						for(String str : sec.getStringList("negativePermissions")){
-							if(p.hasPermission(str)) negAmount++;
+							if(!p.hasPermission(str)) negAmount++;
 						}
 						
 						if(sec.getBoolean("requireAllPositivePermissions")){
