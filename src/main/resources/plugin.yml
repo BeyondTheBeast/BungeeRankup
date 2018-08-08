@@ -3,4 +3,4 @@ main: eu.beyondthebeast.bungeerankup.BungeeRankup
 version: 1.0
 author: Vankka
 depends:
-  - Plan
+  - BungeeRankup
