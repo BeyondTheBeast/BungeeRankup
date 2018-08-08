@@ -50,7 +50,7 @@ public class BungeeRankup extends Plugin {
 
 
         startScheduler();
-        ProxyServer.getInstance().getPluginManager().registerCommand(this, new BungeeRankupCommand("br"));
+        ProxyServer.getInstance().getPluginManager().registerCommand(this, new BungeeRankupCommand());
     }
 
     void reloadConfig() {

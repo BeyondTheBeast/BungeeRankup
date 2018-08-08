@@ -8,8 +8,8 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.plugin.Command;
 
 public class BungeeRankupCommand extends Command {
-    BungeeRankupCommand(String name) {
-        super(name);
+    BungeeRankupCommand() {
+        super("bungeerankup", null, "br");
     }
 
     @Override
