@@ -1,7 +1,6 @@
 name: BungeeRankup
-main: com.Vankka.bungeerankup.BungeeRankup
+main: eu.beyondthebeast.bungeerankup.BungeeRankup
 version: 1.0
 author: Vankka
 depends:
-  - LuckPerms
-  - BungeeOnlineTime
+  - Plan
