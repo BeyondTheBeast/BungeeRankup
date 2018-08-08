@@ -13,22 +13,21 @@ import net.md_5.bungee.config.YamlConfiguration;
 
 public class BungeeRankup extends Plugin {
     private static BungeeRankup instance;
-    private Configuration config;
+    private Configuration configuration;
     private ScheduledTask task;
 
     static BungeeRankup getInstance() { return instance; }
 
     public void onEnable() {
         instance = this;
-        File configFile = new File(getDataFolder(), "config.yml");
+        File configFile = new File(getDataFolder(), "config.yaml");
 
         try {
             if (!getDataFolder().exists())
                 getDataFolder().mkdir();
             if (!configFile.exists()) {
-                ProxyServer.getInstance().getLogger().info("Config not found, creating!");
                 configFile.createNewFile();
-                InputStream inputStream = getResourceAsStream("config.yml");
+                InputStream inputStream = getResourceAsStream("config.yaml");
                 OutputStream outputStream = new FileOutputStream(configFile);
 
                 int bit;
@@ -37,17 +36,12 @@ public class BungeeRankup extends Plugin {
 
                 inputStream.close();
                 outputStream.close();
-            } else {
-                ProxyServer.getInstance().getLogger().info("Config found, loading!");
             }
 
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+            configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
         } catch (IOException e) {
-            ProxyServer.getInstance().getLogger().warning("Unable to create configuration!");
             e.printStackTrace();
         }
-
-
 
         startScheduler();
         ProxyServer.getInstance().getPluginManager().registerCommand(this, new BungeeRankupCommand());
@@ -55,15 +49,15 @@ public class BungeeRankup extends Plugin {
 
     void reloadConfig() {
         try {
-            File configFile = new File(BungeeRankup.getInstance().getDataFolder(), "config.yml");
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+            File configFile = new File(BungeeRankup.getInstance().getDataFolder(), "config.yaml");
+            configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     void startScheduler() {
-        task = ProxyServer.getInstance().getScheduler().schedule(this, new Thread(this::check), 0, config.getLong("sync_delay"), TimeUnit.MINUTES);
+        task = ProxyServer.getInstance().getScheduler().schedule(this, new Thread(this::check), 0, configuration.getLong("sync_delay"), TimeUnit.MINUTES);
     }
 
     void stopScheduler() {
@@ -75,19 +69,19 @@ public class BungeeRankup extends Plugin {
             long startTime = System.currentTimeMillis();
 
             if (ProxyServer.getInstance().getPlayers().size() == 0) {
-                if (config.getBoolean("log"))
+                if (configuration.getBoolean("log"))
                     ProxyServer.getInstance().getLogger().info("No players online, not checking");
                 return;
             }
 
             if (ProxyServer.getInstance().getPlayers().size() != 0) {
                 for (ProxiedPlayer proxiedPlayer : ProxyServer.getInstance().getPlayers()) {
-                    for (String rank : config.getSection("ranks").getKeys()) {
-                        Configuration sec = config.getSection("ranks").getSection(rank);
+                    for (String rank : configuration.getSection("ranks").getKeys()) {
+                        Configuration sec = configuration.getSection("ranks").getSection(rank);
 
                         long time = BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L);
 
-                        boolean proceed = false;
+                        boolean proceed;
                         int posAmount = 0;
                         int negAmount = 0;
                         for (String str : sec.getStringList("postivePermissions")) {
@@ -119,7 +113,7 @@ public class BungeeRankup extends Plugin {
                             continue;
 
                         if (time >= sec.getDouble("timeRequired")) {
-                            if (config.getBoolean("log"))
+                            if (configuration.getBoolean("log"))
                                 ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
                             for (String str : sec.getStringList("commands")) {
                                 ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", proxiedPlayer.getName()));
@@ -130,7 +124,7 @@ public class BungeeRankup extends Plugin {
                 }
             }
 
-            if (config.getBoolean("log"))
+            if (configuration.getBoolean("log"))
                 ProxyServer.getInstance().getLogger().info("Rankup check completed in; " + (System.currentTimeMillis() - startTime) + "ms");
         } catch (Exception e) {
             e.printStackTrace();
