@@ -3,26 +3,38 @@ package eu.beyondthebeast.bungeerankup;
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 import lu.r3flexi0n.bungeeonlinetime.BungeeOnlineTime;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Plugin;
-import net.md_5.bungee.api.scheduler.ScheduledTask;
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 
 public class BungeeRankup extends Plugin {
-    private static BungeeRankup instance;
     private Configuration configuration;
-    private ScheduledTask task;
-
-    static BungeeRankup getInstance() { return instance; }
+    private final String header =
+            ChatColor.DARK_GRAY + ChatColor.BOLD.toString() + "["
+            + ChatColor.GREEN + ChatColor.BOLD.toString() + "B" + ChatColor.BLACK + ChatColor.BOLD.toString() + "R"
+            + ChatColor.DARK_GRAY + ChatColor.BOLD.toString() + "]" + ChatColor.RESET;
 
     public void onEnable() {
-        instance = this;
-        File configFile = new File(getDataFolder(), "config.yaml");
+        if (!reloadConfiguration()) {
+            getLogger().severe("Unable to load configuration");
+            return;
+        }
 
+        getProxy().getScheduler().schedule(this, new Thread(this::check), 0, configuration.getLong("sync_delay"), TimeUnit.MINUTES);
+        getProxy().getPluginManager().registerCommand(this, new BungeeRankupCommand());
+    }
+
+    private boolean reloadConfiguration() {
         try {
+            File configFile = new File(getDataFolder(), "config.yaml");
+
             if (!getDataFolder().exists())
                 getDataFolder().mkdir();
             if (!configFile.exists()) {
@@ -39,32 +51,14 @@ public class BungeeRankup extends Plugin {
             }
 
             configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
-        }
-
-        startScheduler();
-        ProxyServer.getInstance().getPluginManager().registerCommand(this, new BungeeRankupCommand());
-    }
-
-    void reloadConfig() {
-        try {
-            File configFile = new File(BungeeRankup.getInstance().getDataFolder(), "config.yaml");
-            configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+            return false;
         }
     }
 
-    void startScheduler() {
-        task = ProxyServer.getInstance().getScheduler().schedule(this, new Thread(this::check), 0, configuration.getLong("sync_delay"), TimeUnit.MINUTES);
-    }
-
-    void stopScheduler() {
-        getProxy().getScheduler().cancel(task);
-    }
-
-    void check() {
+    private void check() {
         try {
             long startTime = System.currentTimeMillis();
 
@@ -74,51 +68,50 @@ public class BungeeRankup extends Plugin {
                 return;
             }
 
-            if (ProxyServer.getInstance().getPlayers().size() != 0) {
-                for (ProxiedPlayer proxiedPlayer : ProxyServer.getInstance().getPlayers()) {
-                    for (String rank : configuration.getSection("ranks").getKeys()) {
-                        Configuration sec = configuration.getSection("ranks").getSection(rank);
+            for (ProxiedPlayer proxiedPlayer : ProxyServer.getInstance().getPlayers()) {
+                for (String rank : configuration.getSection("ranks").getKeys()) {
+                    Configuration section = configuration.getSection("ranks").getSection(rank);
 
-                        long time = BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L);
+                    boolean proceed;
 
-                        boolean proceed;
-                        int posAmount = 0;
-                        int negAmount = 0;
-                        for (String str : sec.getStringList("postivePermissions")) {
-                            if (proxiedPlayer.hasPermission(str))
-                                posAmount++;
-                        }
+                    int posAmount = 0;
+                    for (String str : section.getStringList("positivePermissions")) {
+                        if (proxiedPlayer.hasPermission(str))
+                            posAmount++;
+                    }
 
-                        for (String str : sec.getStringList("negativePermissions")) {
-                            if (!proxiedPlayer.hasPermission(str))
-                                negAmount++;
-                        }
+                    if (section.getBoolean("requireAllPositivePermissions")) {
+                        proceed = section.getStringList("positivePermissions").size() == posAmount;
+                    } else {
+                        proceed = posAmount > 0;
+                    }
 
-                        if (sec.getBoolean("requireAllPositivePermissions")) {
-                            proceed = sec.getStringList("positivePermissions").size() == posAmount;
-                        } else {
-                            proceed = posAmount > 0;
-                        }
+                    if (!proceed)
+                        continue;
 
-                        if (!proceed)
-                            continue;
+                    int negAmount = 0;
+                    for (String str : section.getStringList("negativePermissions")) {
+                        if (!proxiedPlayer.hasPermission(str))
+                            negAmount++;
+                    }
 
-                        if (sec.getBoolean("requireAllNegativePermissions")) {
-                            proceed = sec.getStringList("negativePermissions").size() == negAmount;
-                        } else {
-                            proceed = negAmount > 0;
-                        }
+                    if (section.getBoolean("requireAllNegativePermissions")) {
+                        proceed = section.getStringList("negativePermissions").size() == negAmount;
+                    } else {
+                        proceed = negAmount > 0;
+                    }
 
-                        if (!proceed)
-                            continue;
+                    if (!proceed)
+                        continue;
 
-                        if (time >= sec.getDouble("timeRequired")) {
-                            if (configuration.getBoolean("log"))
-                                ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
-                            for (String str : sec.getStringList("commands")) {
-                                ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", proxiedPlayer.getName()));
-                                ProxyServer.getInstance().getLogger().info(str.replace("%name%", proxiedPlayer.getName()));
-                            }
+                    int time = (int) (BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
+                    if (time >= section.getInt("timeRequired")) {
+                        if (configuration.getBoolean("log"))
+                            ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
+
+                        for (String str : section.getStringList("commands")) {
+                            ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", proxiedPlayer.getName()));
+                            ProxyServer.getInstance().getLogger().info(str.replace("%name%", proxiedPlayer.getName()));
                         }
                     }
                 }
@@ -128,6 +121,68 @@ public class BungeeRankup extends Plugin {
                 ProxyServer.getInstance().getLogger().info("Rankup check completed in; " + (System.currentTimeMillis() - startTime) + "ms");
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private class BungeeRankupCommand extends Command {
+        BungeeRankupCommand() {
+            super("bungeerankup", null, "br");
+        }
+
+        @Override
+        public void execute(CommandSender sender, String[] args) {
+            if (check(sender, args))
+                return;
+            if (reload(sender, args))
+                return;
+            if (help(sender, args))
+                return;
+
+            sender.sendMessage(new TextComponent(header + ChatColor.AQUA + ChatColor.BOLD.toString() + " Running version "
+                                                 + ChatColor.GOLD + ChatColor.BOLD.toString() + getDescription().getVersion()));
+        }
+
+        private boolean check(CommandSender sender, String[] args) {
+            if (args.length < 1)
+                return false;
+            if (!args[0].equalsIgnoreCase("check"))
+                return false;
+
+            if (sender.hasPermission("bungeerankup.check")) {
+                BungeeRankup.this.check();
+                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("checkCompleted"))));
+            } else {
+                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
+            }
+
+            return true;
+        }
+
+        private boolean reload(CommandSender sender, String[] args) {
+            if (args.length < 1)
+                return false;
+            if (!args[0].equalsIgnoreCase("reload"))
+                return false;
+
+            if (sender.hasPermission("bungeerankup.reload"))
+                if (reloadConfiguration())
+                    sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadSuccessMessage"))));
+                else
+                    sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadFailedMessage"))));
+            else
+                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
+            return true;
+        }
+
+        private boolean help(CommandSender sender, String[] args) {
+            if (args.length < 1)
+                return false;
+            if (!args[0].equalsIgnoreCase("help"))
+                return false;
+
+            sender.sendMessage(new TextComponent(header + ChatColor.AQUA + ChatColor.BOLD.toString() + " /br check " + ChatColor.RED + "Runs rankup check"));
+            sender.sendMessage(new TextComponent(header + ChatColor.AQUA + ChatColor.BOLD.toString() + " /br reload " + ChatColor.RED + "Reload the configuration"));
+            return true;
         }
     }
 }

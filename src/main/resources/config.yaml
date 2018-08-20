@@ -2,19 +2,26 @@
 log: true
 
 # Delay to sync ranks [Minutes]
-sync_delay: 5
+sync_delay: 3
 
 # Ranks
 ranks:
   # Name of the rankup
   rankup1:
     # Require all [true] or require one [false] permission(s)
-     requireAllPositivePermissions: true
-     requireAllNegativePermissions: true
-     positivePermissions: ["group.default"]
-     negativePermissions: ["group.member"]
+    requireAllPositivePermissions: true
+    requireAllNegativePermissions: true
+    positivePermissions: ["group.default"]
+    negativePermissions: ["group.member"]
     # Time required for rankup [Minutes]
-     timeRequired: 60
+    timeRequired: 60
     # Command to run, if conditions are met
     # %name% user's name
-     commands: ["lpb user %name% parent add member", "lpb user %name% switchprimarygroup member", "lpb user %name% parent remove default"]
+    commands: ["lpb user %name% parent add member", "lpb user %name% switchprimarygroup member", "lpb user %name% parent remove default"]
+
+
+# Messages
+checkCompleted: "&aCheck completed"
+configReloadSuccessMessage: "&aConfiguration reloaded"
+configReloadFailedMessage: "&cFailed to reload config"
+noPermissionMessage: "&cNo permission"
