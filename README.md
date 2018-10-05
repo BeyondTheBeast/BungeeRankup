@@ -1,2 +1,2 @@
-# BungeeRankup [![Build Status](https://travis-ci.org/BeyondTheBeast/BungeeRankup.svg?branch=master)](https://travis-ci.org/BeyondTheBeast/BungeeRankup)
+# BungeeRankup [![Build Status](https://travis-ci.org/BeyondTheBeast/BungeeRankup.svg?branch=master)](https://travis-ci.org/BeyondTheBeast/BungeeRankup) [![Maintainability](https://api.codeclimate.com/v1/badges/3b7bcf5b62f007c36c23/maintainability)](https://codeclimate.com/github/BeyondTheBeast/BungeeRankup/maintainability)
 Requires [BungeeOnlineTime](https://www.spigotmc.org/resources/bungeeonlinetime.795/)

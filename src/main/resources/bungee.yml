@@ -1,6 +1,6 @@
 name: BungeeRankup
 main: eu.beyondthebeast.bungeerankup.BungeeRankup
-version: 1.0
+version: @VERSION@
 author: Vankka
 depends:
   - BungeeOnlineTime
