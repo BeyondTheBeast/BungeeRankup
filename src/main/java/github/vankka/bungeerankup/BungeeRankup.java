@@ -1,7 +1,7 @@
 package github.vankka.bungeerankup;
 
 import java.io.*;
-import java.sql.SQLException;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 import lu.r3flexi0n.bungeeonlinetime.BungeeOnlineTime;
 import net.md_5.bungee.api.ChatColor;
@@ -37,9 +37,9 @@ public class BungeeRankup extends Plugin {
             File configFile = new File(getDataFolder(), "config.yaml");
 
             if (!getDataFolder().exists())
-                getDataFolder().mkdir();
+                Files.createDirectory(getDataFolder().toPath());
             if (!configFile.exists()) {
-                configFile.createNewFile();
+                Files.createFile(configFile.toPath());
                 InputStream inputStream = getResourceAsStream("config.yaml");
                 OutputStream outputStream = new FileOutputStream(configFile);
 
@@ -79,17 +79,17 @@ public class BungeeRankup extends Plugin {
         }
     }
 
-    private void checkRanks(ProxiedPlayer proxiedPlayer) throws SQLException, ClassNotFoundException {
+    private void checkRanks(ProxiedPlayer proxiedPlayer) throws Exception {
         for (String rank : configuration.getSection("ranks").getKeys()) {
             Configuration section = configuration.getSection("ranks").getSection(rank);
 
-            if (!checkRank(proxiedPlayer, rank, "Positive"))
+            if (isMissingRankRequirements(proxiedPlayer, rank, "Positive"))
                 continue;
 
-            if (!checkRank(proxiedPlayer, rank, "Negative"))
+            if (isMissingRankRequirements(proxiedPlayer, rank, "Negative"))
                 continue;
 
-            int time = (int) (BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
+            int time = (int) (BungeeOnlineTime.sql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
             if (time >= section.getInt("timeRequired")) {
                 if (configuration.getBoolean("log"))
                     ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
@@ -102,7 +102,7 @@ public class BungeeRankup extends Plugin {
         }
     }
 
-    private boolean checkRank(ProxiedPlayer proxiedPlayer, String rank, String identifier) {
+    private boolean isMissingRankRequirements(ProxiedPlayer proxiedPlayer, String rank, String identifier) {
         Configuration section = configuration.getSection("ranks").getSection(rank);
 
         int posAmount = 0;
@@ -111,9 +111,9 @@ public class BungeeRankup extends Plugin {
                 posAmount++;
 
         if (section.getBoolean("requireAll" + identifier + "Permissions"))
-            return section.getStringList(identifier.toLowerCase() + "Permissions").size() == posAmount;
+            return section.getStringList(identifier.toLowerCase() + "Permissions").size() != posAmount;
         else
-            return posAmount > 0;
+            return posAmount <= 0;
     }
 
     private class BungeeRankupCommand extends Command {
