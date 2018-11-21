@@ -1,5 +1,5 @@
 name: BungeeRankup
-main: eu.beyondthebeast.bungeerankup.BungeeRankup
+main: github.vankka.bungeerankup.BungeeRankup
 version: @VERSION@
 author: Vankka
 depends:
