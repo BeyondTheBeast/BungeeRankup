@@ -1,4 +1,4 @@
-package eu.beyondthebeast.bungeerankup;
+package github.vankka.bungeerankup;
 
 import java.io.*;
 import java.util.concurrent.TimeUnit;
@@ -19,7 +19,7 @@ public class BungeeRankup extends Plugin {
     private final String header =
             ChatColor.DARK_GRAY + ChatColor.BOLD.toString() + "["
             + ChatColor.GREEN + ChatColor.BOLD.toString() + "B" + ChatColor.BLACK + ChatColor.BOLD.toString() + "R"
-            + ChatColor.DARK_GRAY + ChatColor.BOLD.toString() + "]" + ChatColor.RESET;
+            + ChatColor.DARK_GRAY + ChatColor.BOLD.toString() + "]" + ChatColor.RESET + " ";
 
     public void onEnable() {
         if (!reloadConfiguration()) {
@@ -150,9 +150,9 @@ public class BungeeRankup extends Plugin {
 
             if (sender.hasPermission("bungeerankup.check")) {
                 BungeeRankup.this.check();
-                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("checkCompleted"))));
+                sender.sendMessage(new TextComponent(header + ChatColor.translateAlternateColorCodes('&', configuration.getString("checkCompleted"))));
             } else {
-                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
+                sender.sendMessage(new TextComponent(header + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
             }
 
             return true;
@@ -166,11 +166,11 @@ public class BungeeRankup extends Plugin {
 
             if (sender.hasPermission("bungeerankup.reload"))
                 if (reloadConfiguration())
-                    sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadSuccessMessage"))));
+                    sender.sendMessage(new TextComponent(header + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadSuccessMessage"))));
                 else
-                    sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadFailedMessage"))));
+                    sender.sendMessage(new TextComponent(header + ChatColor.translateAlternateColorCodes('&', configuration.getString("configReloadFailedMessage"))));
             else
-                sender.sendMessage(new TextComponent(header + " " + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
+                sender.sendMessage(new TextComponent(header + ChatColor.translateAlternateColorCodes('&', configuration.getString("noPermissionMessage"))));
             return true;
         }
 
