@@ -1,6 +1,7 @@
 package github.vankka.bungeerankup;
 
 import java.io.*;
+import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 import lu.r3flexi0n.bungeeonlinetime.BungeeOnlineTime;
 import net.md_5.bungee.api.ChatColor;
@@ -68,60 +69,51 @@ public class BungeeRankup extends Plugin {
                 return;
             }
 
-            for (ProxiedPlayer proxiedPlayer : ProxyServer.getInstance().getPlayers()) {
-                for (String rank : configuration.getSection("ranks").getKeys()) {
-                    Configuration section = configuration.getSection("ranks").getSection(rank);
-
-                    boolean proceed;
-
-                    int posAmount = 0;
-                    for (String str : section.getStringList("positivePermissions")) {
-                        if (proxiedPlayer.hasPermission(str))
-                            posAmount++;
-                    }
-
-                    if (section.getBoolean("requireAllPositivePermissions")) {
-                        proceed = section.getStringList("positivePermissions").size() == posAmount;
-                    } else {
-                        proceed = posAmount > 0;
-                    }
-
-                    if (!proceed)
-                        continue;
-
-                    int negAmount = 0;
-                    for (String str : section.getStringList("negativePermissions")) {
-                        if (!proxiedPlayer.hasPermission(str))
-                            negAmount++;
-                    }
-
-                    if (section.getBoolean("requireAllNegativePermissions")) {
-                        proceed = section.getStringList("negativePermissions").size() == negAmount;
-                    } else {
-                        proceed = negAmount > 0;
-                    }
-
-                    if (!proceed)
-                        continue;
-
-                    int time = (int) (BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
-                    if (time >= section.getInt("timeRequired")) {
-                        if (configuration.getBoolean("log"))
-                            ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
-
-                        for (String str : section.getStringList("commands")) {
-                            ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", proxiedPlayer.getName()));
-                            ProxyServer.getInstance().getLogger().info(str.replace("%name%", proxiedPlayer.getName()));
-                        }
-                    }
-                }
-            }
+            for (ProxiedPlayer proxiedPlayer : ProxyServer.getInstance().getPlayers())
+                checkRanks(proxiedPlayer);
 
             if (configuration.getBoolean("log"))
                 ProxyServer.getInstance().getLogger().info("Rankup check completed in; " + (System.currentTimeMillis() - startTime) + "ms");
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void checkRanks(ProxiedPlayer proxiedPlayer) throws SQLException, ClassNotFoundException {
+        for (String rank : configuration.getSection("ranks").getKeys()) {
+            Configuration section = configuration.getSection("ranks").getSection(rank);
+
+            if (!checkRank(proxiedPlayer, rank, "Positive"))
+                continue;
+
+            if (!checkRank(proxiedPlayer, rank, "Negative"))
+                continue;
+
+            int time = (int) (BungeeOnlineTime.mysql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
+            if (time >= section.getInt("timeRequired")) {
+                if (configuration.getBoolean("log"))
+                    ProxyServer.getInstance().getLogger().info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
+
+                for (String str : section.getStringList("commands")) {
+                    ProxyServer.getInstance().getPluginManager().dispatchCommand(ProxyServer.getInstance().getConsole(), str.replace("%name%", proxiedPlayer.getName()));
+                    ProxyServer.getInstance().getLogger().info(str.replace("%name%", proxiedPlayer.getName()));
+                }
+            }
+        }
+    }
+
+    private boolean checkRank(ProxiedPlayer proxiedPlayer, String rank, String identifier) {
+        Configuration section = configuration.getSection("ranks").getSection(rank);
+
+        int posAmount = 0;
+        for (String str : section.getStringList(identifier.toLowerCase() + "Permissions"))
+            if (proxiedPlayer.hasPermission(str))
+                posAmount++;
+
+        if (section.getBoolean("requireAll" + identifier + "Permissions"))
+            return section.getStringList(identifier.toLowerCase() + "Permissions").size() == posAmount;
+        else
+            return posAmount > 0;
     }
 
     private class BungeeRankupCommand extends Command {
