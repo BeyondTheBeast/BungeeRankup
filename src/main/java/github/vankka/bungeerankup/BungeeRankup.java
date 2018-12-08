@@ -81,13 +81,14 @@ public class BungeeRankup extends Plugin {
     private void checkRank(ProxiedPlayer proxiedPlayer, String rank) throws Exception {
         Configuration section = configuration.getSection("ranks").getSection(rank);
 
-        if (isMissingRankRequirements(proxiedPlayer, rank, "Positive"))
+        if (isMissingRankRequirements(proxiedPlayer, rank, "Positive", true))
             return;
 
-        if (isMissingRankRequirements(proxiedPlayer, rank, "Negative"))
+        if (isMissingRankRequirements(proxiedPlayer, rank, "Negative", false))
             return;
 
         int time = (int) (BungeeOnlineTime.sql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
+
         if (time >= section.getInt("timeRequired")) {
             info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
 
@@ -98,18 +99,21 @@ public class BungeeRankup extends Plugin {
         }
     }
 
-    private boolean isMissingRankRequirements(ProxiedPlayer proxiedPlayer, String rank, String identifier) {
+    private boolean isMissingRankRequirements(ProxiedPlayer proxiedPlayer, String rank, String identifier, boolean permissionState) {
         Configuration section = configuration.getSection("ranks").getSection(rank);
 
-        int posAmount = 0;
-        for (String str : section.getStringList(identifier.toLowerCase() + "Permissions"))
-            if (proxiedPlayer.hasPermission(str))
-                posAmount++;
+        int amount = 0;
+        for (String str : section.getStringList(identifier.toLowerCase() + "Permissions")) {
+            System.out.println(str + ": " + proxiedPlayer.hasPermission(str) + " | " + permissionState);
+
+            if (proxiedPlayer.hasPermission(str) == permissionState)
+                amount++;
+        }
 
         if (section.getBoolean("requireAll" + identifier + "Permissions"))
-            return section.getStringList(identifier.toLowerCase() + "Permissions").size() != posAmount;
+            return section.getStringList(identifier.toLowerCase() + "Permissions").size() != amount;
         else
-            return posAmount <= 0;
+            return amount <= 0;
     }
 
     private void info(String info) {
@@ -131,7 +135,7 @@ public class BungeeRankup extends Plugin {
             if (help(sender, args))
                 return;
 
-            sender.sendMessage(new TextComponent(header + ChatColor.AQUA + ChatColor.BOLD.toString() + " Running version "
+            sender.sendMessage(new TextComponent(header + ChatColor.AQUA + ChatColor.BOLD.toString() + "Running version "
                                                  + ChatColor.GOLD + ChatColor.BOLD.toString() + getDescription().getVersion()));
         }
 
