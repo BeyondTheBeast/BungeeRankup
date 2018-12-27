@@ -87,9 +87,12 @@ public class BungeeRankup extends Plugin {
         if (isMissingRankRequirements(proxiedPlayer, rank, "Negative", false))
             return;
 
-        int time = (int) (BungeeOnlineTime.sql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) % 3600L / 60L);
+        long time = Math.round((BungeeOnlineTime.sql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) / 60F));
 
-        if (time >= section.getInt("timeRequired")) {
+        if (configuration.getString("debug", null) != null)
+            getLogger().info("[" + proxiedPlayer.getName() + "] " + time + " | " + section.getLong("timeRequired"));
+
+        if (time >= section.getLong("timeRequired")) {
             info(proxiedPlayer.getName() + " met the conditions. Time for a rankup!");
 
             for (String str : section.getStringList("commands")) {
@@ -104,7 +107,8 @@ public class BungeeRankup extends Plugin {
 
         int amount = 0;
         for (String str : section.getStringList(identifier.toLowerCase() + "Permissions")) {
-            System.out.println(str + ": " + proxiedPlayer.hasPermission(str) + " | " + permissionState);
+            if (configuration.getString("debug", null) != null)
+                getLogger().info("[" + proxiedPlayer.getName() + "] " + str + ": " + proxiedPlayer.hasPermission(str) + " | " + permissionState);
 
             if (proxiedPlayer.hasPermission(str) == permissionState)
                 amount++;
