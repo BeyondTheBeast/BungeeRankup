@@ -1,4 +1,4 @@
-package github.vankka.bungeerankup;
+package me.vankka.bungeerankup;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -87,7 +87,7 @@ public class BungeeRankup extends Plugin {
         if (isMissingRankRequirements(proxiedPlayer, rank, "Negative", false))
             return;
 
-        long time = Math.round((BungeeOnlineTime.sql.getOnlineTime(proxiedPlayer.getUniqueId(), 0L) / 60F));
+        long time = Math.round((BungeeOnlineTime.SQL.getOnlineTime(proxiedPlayer.getUniqueId()).getTime() / 60000F));
 
         if (configuration.getString("debug", null) != null)
             getLogger().info("[" + proxiedPlayer.getName() + "] " + time + " | " + section.getLong("timeRequired"));
